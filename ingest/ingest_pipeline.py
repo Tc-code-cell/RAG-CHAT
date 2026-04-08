@@ -3,7 +3,9 @@ from ingest.md_loader import load_markdown
 from ingest.web_loader import load_web
 from ingest.splitter import split_documents
 
+from app.config import settings
 from vectorstore.pinecone_store import get_vectorstore
+from vectorstore.local_store import save_chunks
 
 
 def ingest_file(file_path):
@@ -19,8 +21,10 @@ def ingest_file(file_path):
 
     chunks = split_documents(docs)
 
-    vectorstore = get_vectorstore()
-
-    vectorstore.add_documents(chunks)
+    if settings.USE_LOCAL_RAG:
+        save_chunks(chunks)
+    else:
+        vectorstore = get_vectorstore()
+        vectorstore.add_documents(chunks)
 
     return len(chunks)

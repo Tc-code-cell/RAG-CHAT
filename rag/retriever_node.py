@@ -1,6 +1,6 @@
-from langchain_core.messages import HumanMessage
-
+from app.config import settings
 from vectorstore.pinecone_store import get_vectorstore
+from vectorstore.local_store import retrieve_chunks
 
 
 def retrieve_node(state):
@@ -11,11 +11,12 @@ def retrieve_node(state):
 
     query = last_message.content
 
-    vectorstore = get_vectorstore()
-
-    retriever = vectorstore.as_retriever()
-
-    docs = retriever.invoke(query)
+    if settings.USE_LOCAL_RAG:
+        docs = retrieve_chunks(query)
+    else:
+        vectorstore = get_vectorstore()
+        retriever = vectorstore.as_retriever()
+        docs = retriever.invoke(query)
 
     context = "\n\n".join(
         doc.page_content for doc in docs

@@ -1,13 +1,35 @@
-from fastapi import APIRouter
+import shutil
+from pathlib import Path
+
+from fastapi import APIRouter, File, HTTPException, UploadFile
 
 router = APIRouter()
+UPLOAD_DIR = Path("uploads")
+
 
 @router.post("/upload")
+async def upload_file(file: UploadFile = File(...)):
+    suffix = Path(file.filename or "").suffix.lower()
 
-def upload_file():
+    if suffix not in {".pdf", ".md"}:
+        raise HTTPException(
+            status_code=400,
+            detail="Only PDF and Markdown files are supported."
+        )
 
-    # save file
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-    # run ingestion
+    target_path = UPLOAD_DIR / file.filename
 
-    return {"status": "success"}
+    with target_path.open("wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    from ingest.ingest_pipeline import ingest_file
+
+    chunk_count = ingest_file(str(target_path))
+
+    return {
+        "status": "success",
+        "filename": file.filename,
+        "chunks": chunk_count
+    }
