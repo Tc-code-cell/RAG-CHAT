@@ -1,19 +1,24 @@
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 
 from langchain_core.documents import Document
 from langchain_core.messages import BaseMessage
 
 
-def build_retriever(vectorstore, *, search_type: str = "mmr", k: int = 6, fetch_k: int = 20):
+def build_retriever(vectorstore, *, search_type: str = "mmr", k: int = 8, fetch_k: int = 24):
     return vectorstore.as_retriever(
         search_type=search_type,
         search_kwargs={"k": k, "fetch_k": fetch_k},
     )
 
 
-def build_retrieval_query(question: str, messages: Sequence[BaseMessage] | None = None, max_history_turns: int = 2) -> str:
+def build_retrieval_query(
+    question: str,
+    messages: Sequence[BaseMessage] | None = None,
+    max_history_turns: int = 2,
+) -> str:
     question = (question or "").strip()
     if not messages:
         return question
@@ -34,6 +39,61 @@ def build_retrieval_query(question: str, messages: Sequence[BaseMessage] | None 
 
     history_block = "\n".join(history_lines)
     return f"历史相关对话：\n{history_block}\n\n当前问题：{question}"
+
+
+def _extract_terms(text: str) -> set[str]:
+    normalized = (text or "").lower()
+    terms: set[str] = set()
+
+    for token in re.findall(r"[a-z0-9_]+|[\u4e00-\u9fff]+", normalized):
+        if not token:
+            continue
+
+        terms.add(token)
+        if re.fullmatch(r"[\u4e00-\u9fff]+", token):
+            if len(token) >= 2:
+                terms.update(token[i : i + 2] for i in range(len(token) - 1))
+
+    return terms
+
+
+def score_document(question: str, doc: Document) -> float:
+    question_terms = _extract_terms(question)
+    content = doc.page_content or ""
+    content_terms = _extract_terms(content)
+    metadata = dict(doc.metadata or {})
+
+    overlap = len(question_terms & content_terms)
+    score = float(overlap)
+
+    if question and question in content:
+        score += 8.0
+
+    if question_terms and any(term in content.lower() for term in question_terms if len(term) > 2):
+        score += 1.5
+
+    source_file = str(metadata.get("source_file") or metadata.get("source") or "")
+    if source_file:
+        source_terms = _extract_terms(source_file)
+        score += 0.5 * len(question_terms & source_terms)
+
+    chunk_index = metadata.get("chunk_index")
+    if isinstance(chunk_index, int) and chunk_index == 1:
+        score += 0.2
+
+    return score
+
+
+def rerank_documents(question: str, docs: Sequence[Document], top_k: int = 6) -> list[Document]:
+    if not docs:
+        return []
+
+    ranked = sorted(
+        enumerate(docs),
+        key=lambda item: (-score_document(question, item[1]), item[0]),
+    )
+
+    return [doc for _, doc in ranked[:top_k]]
 
 
 def format_documents(docs: Sequence[Document]) -> str:

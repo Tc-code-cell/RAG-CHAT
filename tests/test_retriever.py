@@ -1,7 +1,11 @@
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, HumanMessage
 
-from rag.retrieval import build_retrieval_query, format_documents
+from rag.retrieval import (
+    build_retrieval_query,
+    format_documents,
+    rerank_documents,
+)
 
 
 def test_build_retrieval_query_includes_recent_history():
@@ -19,6 +23,24 @@ def test_build_retrieval_query_includes_recent_history():
     assert "这份文件主要讲什么" in query
     assert "里面提到了召回吗" in query
     assert "那具体怎么做的" in query
+
+
+def test_rerank_documents_prioritizes_more_relevant_chunk():
+    question = "这份文档有没有讲召回和重排"
+    docs = [
+        Document(
+            page_content="这里在讲前端页面和按钮样式",
+            metadata={"source_file": "ui.md", "chunk_index": 3},
+        ),
+        Document(
+            page_content="这里介绍向量召回和重排，先检索后 rerank，再把结果送入模型",
+            metadata={"source_file": "rag.md", "chunk_index": 1},
+        ),
+    ]
+
+    ranked = rerank_documents(question, docs, top_k=2)
+
+    assert ranked[0].metadata["source_file"] == "rag.md"
 
 
 def test_format_documents_contains_source_metadata():
