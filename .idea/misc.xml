@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project version="4">
-  <component name="Black">
-    <option name="sdkName" value="RAG-CHAT" />
-  </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="RAG-CHAT" project-jdk-type="Python SDK" />
-</project>
