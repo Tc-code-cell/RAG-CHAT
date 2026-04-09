@@ -1,0 +1,42 @@
+# Python 缓存与编译产物
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 构建产物
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# 测试与覆盖率
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# 虚拟环境
+.venv/
+venv/
+env/
+ENV/
+
+# 环境变量与密钥
+.env
+.env.*
+
+# 项目运行数据
+db/
+uploads/
+
+# 编辑器与工具
+.idea/
+.vscode/
+.ruff_cache/
+.mypy_cache/
+.pyre/
+.pdm-python
+.pdm-build/
+.DS_Store
