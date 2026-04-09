@@ -1,3 +1,10 @@
+"""
+文件名：app/main.py
+最后修改时间：2026-04-09
+模块功能：项目启动入口，创建 FastAPI 应用并挂载聊天与文档上传接口。
+模块相关技术：FastAPI、Uvicorn、Python 包导入、路由注册。
+"""
+
 from pathlib import Path
 import sys
 

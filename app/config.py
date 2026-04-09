@@ -1,3 +1,10 @@
+"""
+文件名：app/config.py
+最后修改时间：2026-04-09
+模块功能：集中管理环境变量与项目运行配置，统一控制模型、向量库和本地模式开关。
+模块相关技术：python-dotenv、环境变量管理、Python 配置类。
+"""
+
 import os
 from dotenv import load_dotenv
 

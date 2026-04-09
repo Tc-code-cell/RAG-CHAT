@@ -1,3 +1,10 @@
+"""
+文件名：vectorstore/local_store.py
+最后修改时间：2026-04-09
+模块功能：为本地调试模式提供 JSON 持久化和基于词项匹配的简易召回。
+模块相关技术：JSON 持久化、正则匹配、LangChain Document。
+"""
+
 import json
 import re
 from pathlib import Path

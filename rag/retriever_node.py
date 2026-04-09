@@ -1,3 +1,10 @@
+"""
+文件名：rag/retriever_node.py
+最后修改时间：2026-04-09
+模块功能：执行检索节点逻辑，完成查询改写、向量召回、重排和上下文组织。
+模块相关技术：LangGraph 节点、Pinecone、向量召回、rerank、上下文拼接。
+"""
+
 from app.config import settings
 from rag.retrieval import (
     build_retrieval_query,

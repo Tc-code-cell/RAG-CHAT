@@ -1,3 +1,10 @@
+"""
+文件名：api/chat_routers.py
+最后修改时间：2026-04-09
+模块功能：提供聊天接口，接收用户问题与会话 ID，并驱动 LangGraph 对话流程。
+模块相关技术：FastAPI、Pydantic、LangGraph、LangChain 消息类型。
+"""
+
 from functools import lru_cache
 
 from fastapi import APIRouter

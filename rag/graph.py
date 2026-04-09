@@ -1,3 +1,10 @@
+"""
+文件名：rag/graph.py
+最后修改时间：2026-04-09
+模块功能：定义 RAG 工作流图，串联检索节点与生成节点。
+模块相关技术：LangGraph、状态图、检查点持久化。
+"""
+
 from langgraph.graph import StateGraph
 
 from rag.state import GraphState

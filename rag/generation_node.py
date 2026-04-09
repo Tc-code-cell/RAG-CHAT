@@ -1,3 +1,10 @@
+"""
+文件名：rag/generation_node.py
+最后修改时间：2026-04-09
+模块功能：执行生成节点逻辑，将历史消息与检索上下文交给模型生成最终回答。
+模块相关技术：ChatGroq、LangChain 消息、Prompt Template、中文回答约束。
+"""
+
 from functools import lru_cache
 
 from langchain_core.messages import AIMessage

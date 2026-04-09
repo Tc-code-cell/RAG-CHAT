@@ -1,3 +1,10 @@
+"""
+文件名：rag/retrieval.py
+最后修改时间：2026-04-09
+模块功能：提供检索 query 改写、候选文档重排和上下文格式化能力。
+模块相关技术：文本特征匹配、轻量 rerank、LangChain 文档对象。
+"""
+
 from __future__ import annotations
 
 import re

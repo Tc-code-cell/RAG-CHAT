@@ -1,3 +1,10 @@
+"""
+文件名：api/ingest_routers.py
+最后修改时间：2026-04-09
+模块功能：提供文档上传接口，接收 PDF/Markdown 文件并触发入库流程。
+模块相关技术：FastAPI、文件上传、Python 标准库 shutil、文档入库流程。
+"""
+
 import shutil
 from pathlib import Path
 

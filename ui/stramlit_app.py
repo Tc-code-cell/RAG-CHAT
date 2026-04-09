@@ -1,3 +1,10 @@
+"""
+文件名：ui/stramlit_app.py
+最后修改时间：2026-04-09
+模块功能：提供中文 RAG Chat 的可视化前端，支持上传、聊天、会话管理与调试信息展示。
+模块相关技术：Streamlit、Requests、前端状态管理、聊天界面。
+"""
+
 import uuid
 
 import requests

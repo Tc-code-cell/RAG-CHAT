@@ -1,3 +1,10 @@
+"""
+文件名：rag/prompt.py
+最后修改时间：2026-04-09
+模块功能：定义生成阶段的中文提示词模板，约束模型只依据上下文回答。
+模块相关技术：LangChain PromptTemplate、Prompt Engineering。
+"""
+
 from langchain_core.prompts import ChatPromptTemplate
 
 

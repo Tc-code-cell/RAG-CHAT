@@ -1,3 +1,10 @@
+"""
+文件名：ingest/ingest_pipeline.py
+最后修改时间：2026-04-09
+模块功能：负责文档加载、切分、写入本地存储或向量数据库的完整入库流程。
+模块相关技术：文档加载、文本切分、Pinecone、JSON 持久化、Python 路径处理。
+"""
+
 from pathlib import Path
 
 from ingest.pdf_loader import load_pdf

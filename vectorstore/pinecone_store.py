@@ -1,3 +1,10 @@
+"""
+文件名：vectorstore/pinecone_store.py
+最后修改时间：2026-04-09
+模块功能：初始化 Pinecone 索引并封装向量检索存储对象。
+模块相关技术：Pinecone、LangChain PineconeVectorStore、Embedding、缓存。
+"""
+
 from functools import lru_cache
 
 from pinecone import Pinecone, ServerlessSpec
