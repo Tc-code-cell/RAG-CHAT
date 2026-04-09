@@ -15,11 +15,8 @@ def get_llm():
 
 
 def generation_node(state):
-
     messages = state["messages"]
-
     context = state["context"]
-
     question = messages[-1].content
     history = "\n".join(
         f"{message.type}: {message.content}"
@@ -43,9 +40,12 @@ def generation_node(state):
     llm = get_llm()
 
     prompt = f"""
-你是一个中文 RAG Chat 助手。请结合对话历史和检索到的上下文回答用户问题。
+你是一个中文 RAG Chat 助手。
+你必须始终使用中文回答，禁止输出英文回答。
+请结合对话历史和检索到的上下文回答用户问题。
 如果用户在当前会话里追问之前的内容，请优先参考对话历史。
-如果上下文里没有答案，请明确说明“不确定”或“上下文中没有相关信息”，不要编造。
+如果上下文里没有答案，请明确说明“不确定”或者“上下文中没有相关信息”。
+不要编造，不要发挥。
 
 对话历史：
 {history or "（暂无历史消息）"}
