@@ -172,8 +172,7 @@ streamlit run ui/stramlit_app.py
 5. 轻量重排后把最相关片段送给模型生成
 
 ## 测试
-
-当前已经补充的测试包括：
+测试包括：
 
 - 健康检查接口测试
 - 上传、列表、聊天、删除整条链路测试
@@ -192,8 +191,3 @@ streamlit run ui/stramlit_app.py
 pytest
 ```
 
-## 说明
-
-- 当前项目已经具备完整的 RAG Chat 核心链路，适合作为课程项目、简历项目或后续继续扩展的基础工程。
-- 如果你要开源这个项目，请不要提交真实 `.env` 文件，优先保留 `.env.example`。
-- 如果你要部署到服务器，建议先确认 `FRONTEND_API_BASE`、`USE_LOCAL_RAG` 和在线模式下的 API Key 已正确配置。
