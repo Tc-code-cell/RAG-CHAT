@@ -1,8 +1,8 @@
 """
 文件名：rag/retriever_node.py
-最后修改时间：2026-04-09
-模块功能：执行检索节点逻辑，完成查询改写、向量召回、重排和上下文组织。
-模块相关技术：LangGraph 节点、Pinecone、向量召回、rerank、上下文拼接。
+最后修改时间：2026-04-16
+模块功能：执行检索节点逻辑，完成查询改写、混合检索、重排和上下文组织。
+模块相关技术：LangGraph 节点、Pinecone、混合检索、关键词检索、rerank。
 """
 
 from app.config import settings
@@ -11,6 +11,7 @@ from rag.retrieval import (
     build_retriever,
     format_documents,
     rerank_documents,
+    summarize_documents,
 )
 from vectorstore.local_store import retrieve_chunks
 from vectorstore.pinecone_store import get_vectorstore
@@ -18,25 +19,36 @@ from vectorstore.pinecone_store import get_vectorstore
 
 def retrieve_node(state):
     messages = state["messages"]
-    last_message = messages[-1]
-    query = last_message.content
-    retrieval_query = build_retrieval_query(query, messages)
+    question = messages[-1].content
+    retrieval_query = build_retrieval_query(question, messages)
 
-    if settings.USE_LOCAL_RAG:
-        docs = retrieve_chunks(retrieval_query, k=12)
-    else:
+    dense_docs = []
+    keyword_docs = retrieve_chunks(question, k=settings.KEYWORD_TOP_K)
+
+    if not settings.USE_LOCAL_RAG:
         vectorstore = get_vectorstore()
         try:
-            retriever = build_retriever(vectorstore)
-            docs = retriever.invoke(retrieval_query)
+            retriever = build_retriever(
+                vectorstore,
+                k=settings.VECTOR_TOP_K,
+                fetch_k=settings.VECTOR_FETCH_K,
+            )
+            dense_docs = retriever.invoke(retrieval_query)
         except Exception:
-            docs = vectorstore.similarity_search(retrieval_query, k=12)
+            dense_docs = vectorstore.similarity_search(
+                retrieval_query,
+                k=settings.VECTOR_TOP_K,
+            )
 
-    ranked_docs = rerank_documents(retrieval_query, docs, top_k=6)
-    context = format_documents(ranked_docs)
+    ranked_docs = rerank_documents(
+        question=question,
+        dense_docs=dense_docs,
+        keyword_docs=keyword_docs,
+        top_k=settings.FINAL_TOP_K,
+    )
 
     return {
         "retrieval_query": retrieval_query,
-        "retrieved_documents": ranked_docs,
-        "context": context,
+        "retrieval_scores": summarize_documents(ranked_docs),
+        "context": format_documents(ranked_docs),
     }

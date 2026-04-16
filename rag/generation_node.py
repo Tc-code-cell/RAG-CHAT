@@ -1,6 +1,6 @@
 """
 文件名：rag/generation_node.py
-最后修改时间：2026-04-09
+最后修改时间：2026-04-16
 模块功能：执行生成节点逻辑，将历史消息与检索上下文交给模型生成最终回答。
 模块相关技术：ChatGroq、LangChain 消息、Prompt Template、中文回答约束。
 """
@@ -28,13 +28,11 @@ def _build_local_answer(question: str, context: str) -> str:
     if not cleaned_context:
         return "上下文中没有找到相关信息。"
 
-    lines = []
-    for block in cleaned_context.split("\n\n"):
-        block = block.strip()
-        if block:
-            lines.append(block)
-
-    snippet = " ".join(lines)
+    snippet = " ".join(
+        block.strip()
+        for block in cleaned_context.split("\n\n")
+        if block.strip()
+    )
     if len(snippet) > 500:
         snippet = snippet[:500] + "..."
 
@@ -51,22 +49,20 @@ def generation_node(state):
     )
 
     if settings.USE_LOCAL_RAG:
-        answer = _build_local_answer(question, context)
         return {
             "messages": [
-                AIMessage(content=answer)
+                AIMessage(content=_build_local_answer(question, context))
             ]
         }
 
-    llm = get_llm()
     prompt = get_prompt()
-    prompt_messages = prompt.format_messages(
-        history=history or "（暂无历史消息）",
-        context=context or "（暂无检索到的上下文）",
-        question=question,
+    response = get_llm().invoke(
+        prompt.format_messages(
+            history=history or "（暂无历史消息）",
+            context=context or "（暂无检索到的上下文）",
+            question=question,
+        )
     )
-
-    response = llm.invoke(prompt_messages)
 
     return {
         "messages": [

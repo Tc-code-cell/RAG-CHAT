@@ -1,7 +1,7 @@
 """
 文件名：api/chat_routers.py
-最后修改时间：2026-04-09
-模块功能：提供聊天接口，接收用户问题与会话 ID，并驱动 LangGraph 对话流程。
+最后修改时间：2026-04-16
+模块功能：提供聊天接口，接收用户问题与会话 ID，并返回答案和检索调试信息。
 模块相关技术：FastAPI、Pydantic、LangGraph、LangChain 消息类型。
 """
 
@@ -30,23 +30,19 @@ def get_graph():
 def chat(payload: ChatRequest):
     from langchain_core.messages import HumanMessage
 
-    graph = get_graph()
-
-    response = graph.invoke(
+    response = get_graph().invoke(
         {
             "messages": [
                 HumanMessage(content=payload.query)
             ]
         },
-        config={
-            "configurable": {
-                "thread_id": payload.session_id
-            }
-        }
+        config={"configurable": {"thread_id": payload.session_id}},
     )
 
     return {
         "answer": response["messages"][-1].content,
         "session_id": payload.session_id,
-        "debug_context": response.get("context", "")
+        "debug_context": response.get("context", ""),
+        "retrieval_query": response.get("retrieval_query", ""),
+        "retrieval_scores": response.get("retrieval_scores", []),
     }

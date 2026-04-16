@@ -1,12 +1,13 @@
 """
 文件名：rag/retrieval.py
-最后修改时间：2026-04-09
-模块功能：提供检索 query 改写、候选文档重排和上下文格式化能力。
-模块相关技术：文本特征匹配、轻量 rerank、LangChain 文档对象。
+最后修改时间：2026-04-16
+模块功能：提供检索 query 改写、混合检索重排和上下文格式化能力。
+模块相关技术：文本特征匹配、混合检索、轻量 rerank、LangChain 文档对象。
 """
 
 from __future__ import annotations
 
+import hashlib
 import re
 from collections.abc import Sequence
 
@@ -55,13 +56,19 @@ def _extract_terms(text: str) -> set[str]:
     for token in re.findall(r"[a-z0-9_]+|[\u4e00-\u9fff]+", normalized):
         if not token:
             continue
-
         terms.add(token)
-        if re.fullmatch(r"[\u4e00-\u9fff]+", token):
-            if len(token) >= 2:
-                terms.update(token[i : i + 2] for i in range(len(token) - 1))
+        if re.fullmatch(r"[\u4e00-\u9fff]+", token) and len(token) >= 2:
+            terms.update(token[index : index + 2] for index in range(len(token) - 1))
 
     return terms
+
+
+def _document_key(doc: Document) -> str:
+    metadata = dict(doc.metadata or {})
+    source_file = metadata.get("source_file") or metadata.get("source") or "unknown"
+    chunk_index = metadata.get("chunk_index") or metadata.get("page") or 0
+    content_hash = hashlib.sha1((doc.page_content or "").encode("utf-8")).hexdigest()[:12]
+    return f"{source_file}:{chunk_index}:{content_hash}"
 
 
 def score_document(question: str, doc: Document) -> float:
@@ -81,26 +88,64 @@ def score_document(question: str, doc: Document) -> float:
 
     source_file = str(metadata.get("source_file") or metadata.get("source") or "")
     if source_file:
-        source_terms = _extract_terms(source_file)
-        score += 0.5 * len(question_terms & source_terms)
-
-    chunk_index = metadata.get("chunk_index")
-    if isinstance(chunk_index, int) and chunk_index == 1:
-        score += 0.2
+        score += 0.5 * len(question_terms & _extract_terms(source_file))
 
     return score
 
 
-def rerank_documents(question: str, docs: Sequence[Document], top_k: int = 6) -> list[Document]:
+def _normalize_rank_scores(docs: Sequence[Document]) -> dict[str, float]:
     if not docs:
-        return []
+        return {}
 
-    ranked = sorted(
-        enumerate(docs),
-        key=lambda item: (-score_document(question, item[1]), item[0]),
-    )
+    max_index = max(len(docs) - 1, 1)
+    scores = {}
+    for index, doc in enumerate(docs):
+        rank_score = 1.0 - (index / max_index)
+        scores[_document_key(doc)] = round(rank_score, 4)
+    return scores
 
-    return [doc for _, doc in ranked[:top_k]]
+
+def rerank_documents(
+    question: str,
+    dense_docs: Sequence[Document],
+    keyword_docs: Sequence[Document],
+    top_k: int = 6,
+) -> list[Document]:
+    dense_scores = _normalize_rank_scores(dense_docs)
+    keyword_raw_scores = {
+        _document_key(doc): max(
+            float(dict(doc.metadata or {}).get("_keyword_score", 0.0)),
+            score_document(question, doc),
+        )
+        for doc in keyword_docs
+    }
+
+    max_keyword_score = max(keyword_raw_scores.values(), default=1.0)
+    merged_docs: dict[str, Document] = {}
+
+    for doc in list(dense_docs) + list(keyword_docs):
+        key = _document_key(doc)
+        if key not in merged_docs:
+            merged_docs[key] = Document(
+                page_content=doc.page_content,
+                metadata=dict(doc.metadata or {}),
+            )
+
+    ranked_items = []
+    for key, doc in merged_docs.items():
+        dense_score = dense_scores.get(key, 0.0)
+        keyword_score_raw = keyword_raw_scores.get(key, 0.0)
+        keyword_score = keyword_score_raw / max_keyword_score if max_keyword_score else 0.0
+        retrieval_score = round(0.4 * dense_score + 0.6 * keyword_score, 4)
+
+        doc.metadata["_dense_score"] = round(dense_score, 4)
+        doc.metadata["_keyword_score"] = round(keyword_score_raw, 4)
+        doc.metadata["_retrieval_score"] = retrieval_score
+
+        ranked_items.append((retrieval_score, doc))
+
+    ranked_items.sort(key=lambda item: item[0], reverse=True)
+    return [doc for _, doc in ranked_items[:top_k]]
 
 
 def format_documents(docs: Sequence[Document]) -> str:
@@ -113,15 +158,34 @@ def format_documents(docs: Sequence[Document]) -> str:
         source_file = metadata.get("source_file") or metadata.get("source") or "未知来源"
         chunk_index = metadata.get("chunk_index")
         page = metadata.get("page")
+        retrieval_score = metadata.get("_retrieval_score")
 
         header_parts = [f"片段{index}", f"来源: {source_file}"]
         if page is not None:
             header_parts.append(f"页码: {page}")
         if chunk_index is not None:
             header_parts.append(f"段号: {chunk_index}")
+        if retrieval_score is not None:
+            header_parts.append(f"综合分数: {retrieval_score}")
 
         header = "【" + " | ".join(header_parts) + "】"
-        content = (doc.page_content or "").strip()
-        sections.append(f"{header}\n{content}")
+        sections.append(f"{header}\n{(doc.page_content or '').strip()}")
 
     return "\n\n".join(sections)
+
+
+def summarize_documents(docs: Sequence[Document]) -> list[dict]:
+    summary = []
+    for doc in docs:
+        metadata = dict(doc.metadata or {})
+        summary.append(
+            {
+                "source_file": metadata.get("source_file") or metadata.get("source"),
+                "chunk_index": metadata.get("chunk_index"),
+                "page": metadata.get("page"),
+                "dense_score": metadata.get("_dense_score", 0.0),
+                "keyword_score": metadata.get("_keyword_score", 0.0),
+                "retrieval_score": metadata.get("_retrieval_score", 0.0),
+            }
+        )
+    return summary
